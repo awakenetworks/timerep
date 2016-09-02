@@ -32,28 +32,41 @@
 module Data.Time.RFC3339 (
     -- * Basic type class
     -- $basic
-    formatTimeRFC3339, parseTimeRFC3339
+    formatTimeRFC3339, formatTimeRFC3339Fractional, parseTimeRFC3339
 ) where
 
-import           Control.Applicative
-
-import           Data.Maybe
 import           Data.Monoid         ((<>))
 import           Data.Monoid.Textual hiding (foldr, map)
 import           Data.String         (fromString)
 import           Data.Text           (Text)
-import           Data.Time.Calendar
 import           Data.Time.Format
 import           Data.Time.LocalTime
 import           Data.Time.Util
 
 
 formatTimeRFC3339 :: (TextualMonoid t) => ZonedTime -> t
-formatTimeRFC3339 zt@(ZonedTime lt z) = fromString (formatTime defaultTimeLocale "%FT%T" zt) <> fromString printZone
+formatTimeRFC3339 = formatTimeRFC3339Fractional (Just 0)
+
+formatTimeRFC3339Fractional :: (TextualMonoid t) =>
+                               Maybe Int
+                               -- ^ Optional number of digits to constrain
+                               -- fraction to. If <= 0, don't include fractional
+                               -- part. If Nothing, unconstrained number of
+                               -- digits.
+                               -> ZonedTime
+                               -> t
+formatTimeRFC3339Fractional mn zt@(ZonedTime _ z) =
+  fromString (formatTime defaultTimeLocale "%FT%T" zt)
+  <> truncFrac
+  <> fromString printZone
   where timeZoneStr = timeZoneOffsetString z
         printZone = if timeZoneStr == timeZoneOffsetString utc
                     then "Z"
                     else take 3 timeZoneStr <> ":" <> drop 3 timeZoneStr
+        trunc = case mn of
+                Nothing -> id
+                Just n -> if n <= 0 then const "" else take (n+1)
+        truncFrac = fromString $ trunc (formatTime defaultTimeLocale "%Q" zt)
 
 formatsRFC3339 :: [Text]
 formatsRFC3339 = do
