@@ -65,7 +65,9 @@ formatTimeRFC3339Fractional mn zt@(ZonedTime _ z) =
                     else take 3 timeZoneStr <> ":" <> drop 3 timeZoneStr
         trunc = case mn of
                 Nothing -> id
-                Just n -> if n <= 0 then const "" else take (n+1)
+                Just n
+                  | n <= 0    -> const ""
+                  | otherwise -> \s -> take (n+1) (s <> repeat '0')
         truncFrac = fromString $ trunc (formatTime defaultTimeLocale "%Q" zt)
 
 formatsRFC3339 :: [Text]
